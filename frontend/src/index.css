@@ -1,0 +1,54 @@
+@import "tailwindcss";
+
+/* Theme toggle uses .dark on <html> — required for Tailwind v4 dark: utilities */
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --font-sans: "Inter", system-ui, sans-serif;
+  --color-zydex-lime: #9ae600;
+  --color-zydex-lime-dark: #7acc00;
+  --color-zydex-emerald: #10b981;
+  --color-zydex-emerald-dark: #059669;
+  --color-zydex-bg: #071210;
+  --color-zydex-bg-card: #0f1f18;
+  --color-zydex-border: #1a3d2e;
+}
+
+body {
+  font-family: var(--font-sans);
+  @apply antialiased text-emerald-950 bg-emerald-50;
+}
+
+.dark body {
+  @apply bg-zydex-bg text-emerald-50;
+}
+
+/* Main content text — explicit light/dark (backup if utility classes miss) */
+.zydex-page {
+  @apply text-emerald-900 dark:text-emerald-100;
+}
+
+.zydex-page h1,
+.zydex-page h2,
+.zydex-page h3 {
+  @apply text-emerald-950 dark:text-emerald-50;
+}
+
+.zydex-page p {
+  @apply text-emerald-800 dark:text-emerald-200;
+}
+
+main {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+table {
+  @apply w-full;
+}
+
+@media (max-width: 640px) {
+  .zydex-page {
+    @apply px-3 py-4;
+  }
+}

@@ -1,0 +1,163 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  USER
+  ADMIN
+  RESELLER
+}
+
+enum TransactionStatus {
+  PENDING
+  CONFIRMED
+  FAILED
+  EXPIRED
+}
+
+enum TransactionType {
+  CRYPTO
+  MANUAL
+  REFUND
+}
+
+model User {
+  id              String   @id @default(uuid())
+  username        String   @unique
+  email           String?  @unique
+  passwordHash    String
+  role            Role     @default(USER)
+  magnusUserId    Int?
+  magnusUsername  String?
+  parentId        String?
+  parent          User?    @relation("ResellerTree", fields: [parentId], references: [id])
+  children        User[]   @relation("ResellerTree")
+  apiKey          String?  @unique
+  currency        String   @default("USD")
+  isBlocked       Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  transactions    Transaction[]
+  sipAccounts     SipAccount[]
+  wallet          Wallet?
+  adminLogs       AdminLog[] @relation("AdminActor")
+  notifications   Notification[]
+}
+
+model Wallet {
+  id        String   @id @default(uuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  balance   Decimal  @default(0) @db.Decimal(12, 4)
+  updatedAt DateTime @updatedAt
+}
+
+model Transaction {
+  id              String            @id @default(uuid())
+  userId          String
+  user            User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type            TransactionType
+  status          TransactionStatus @default(PENDING)
+  amount          Decimal           @db.Decimal(12, 4)
+  currency        String            @default("USD")
+  cryptoCurrency  String?
+  cryptoAmount    Decimal?          @db.Decimal(18, 8)
+  walletAddress   String?
+  txHash          String?
+  magnusRefillId  Int?
+  metadata        Json?
+  createdAt       DateTime          @default(now())
+  confirmedAt     DateTime?
+}
+
+model SipAccount {
+  id           String   @id @default(uuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  magnusSipId  Int?
+  username     String
+  secret       String?
+  callerId     String?
+  host         String   @default("dynamic")
+  createdAt    DateTime @default(now())
+}
+
+model CallLog {
+  id            String   @id @default(uuid())
+  magnusCdrId   Int?     @unique
+  username      String
+  destination   String?
+  duration      Int      @default(0)
+  cost          Decimal  @default(0) @db.Decimal(12, 4)
+  sellCost      Decimal? @db.Decimal(12, 4)
+  startTime     DateTime
+  disposition   String?
+  syncedAt      DateTime @default(now())
+}
+
+model RateMarkup {
+  id           String   @id @default(uuid())
+  prefix       String
+  label        String?
+  buyRate      Decimal  @db.Decimal(12, 6)
+  sellRate     Decimal  @db.Decimal(12, 6)
+  marginPct    Decimal  @db.Decimal(5, 2)
+  active       Boolean  @default(true)
+  updatedAt    DateTime @updatedAt
+}
+
+model Announcement {
+  id        String   @id @default(uuid())
+  title     String
+  message   String
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+}
+
+model AdminLog {
+  id        String   @id @default(uuid())
+  adminId   String?
+  admin     User?    @relation("AdminActor", fields: [adminId], references: [id])
+  action    String
+  target    String?
+  details   Json?
+  ipAddress String?
+  createdAt DateTime @default(now())
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      String
+  title     String
+  message   String
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+model SignupPlan {
+  id           String   @id @default(uuid())
+  magnusPlanId Int
+  name         String
+  description  String?
+  active       Boolean  @default(true)
+  sortOrder    Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model FraudAlert {
+  id         String   @id @default(uuid())
+  username   String
+  reason     String
+  severity   String   @default("medium")
+  autoBlocked Boolean @default(false)
+  resolved   Boolean  @default(false)
+  createdAt  DateTime @default(now())
+}
