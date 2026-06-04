@@ -8,7 +8,7 @@ import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { api } from '../api/client';
 import { BrandLogo } from '../components/BrandLogo';
-import { TELEGRAM_SUPPORT, TELEGRAM_LOGO_URL } from '../constants/brand';
+import SupportFab from '../components/SupportFab';
 
 const navItems = [
   { section: 'HOME', items: [{ to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' }] },
@@ -173,21 +173,7 @@ export default function DashboardLayout() {
         </main>
       </div>
 
-      <a
-        href={TELEGRAM_SUPPORT}
-        target="_blank"
-        rel="noopener noreferrer"
-        title="Contact support on Telegram"
-        className="fixed bottom-4 right-4 sm:bottom-6 sm:left-6 sm:right-auto z-50 w-12 h-12 sm:w-14 sm:h-14 rounded-full shadow-lg hover:scale-105 transition-transform ring-2 ring-white/20"
-        aria-label="Telegram support"
-      >
-        <img
-          src={TELEGRAM_LOGO_URL}
-          alt=""
-          className="w-full h-full rounded-full object-cover"
-          draggable={false}
-        />
-      </a>
+      <SupportFab />
     </div>
   );
 }

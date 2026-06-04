@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { authRequired, loadUser } from '../middleware/auth.js';
-import { magnusService } from '../services/magnus.service.js';
+import { magnusService, normalizeOutboundCallerId } from '../services/magnus.service.js';
 import { cryptoService } from '../services/crypto.service.js';
 import { config } from '../config/index.js';
 import prisma from '../utils/prisma.js';
@@ -196,7 +196,10 @@ router.post('/sip/callerid', async (req, res) => {
   if (magnusService.isIpAuthHost(magnusUser.host)) {
     return res.status(400).json({ error: 'Caller ID cannot be changed in IP-to-IP mode' });
   }
-  const cid = String(callerId).trim();
+  const cid = normalizeOutboundCallerId(String(callerId).trim());
+  if (!cid) {
+    return res.status(400).json({ error: 'Caller ID must be a valid US number (10 or 11 digits)' });
+  }
   const result = await magnusService.setCallerId(magnusUser.sip_id, cid);
   if (result?.success === false) {
     const err = result.errors || result.msg || 'Failed to update Caller ID';

@@ -242,7 +242,7 @@ export class CryptoService {
 
     await notificationService
       .notifyAdmin(
-        `💰 OxaPay deposit\nUser: ${user.username}\nAmount: $${amount.toFixed(2)}\nTrack: ${trackId || 'n/a'}`
+        `💰 Balance added\nUser: ${user.username}\nAmount: $${amount.toFixed(2)}\nVia: OxaPay`
       )
       .catch(() => {});
 

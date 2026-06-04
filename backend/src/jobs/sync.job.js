@@ -1,7 +1,6 @@
 import prisma from '../utils/prisma.js';
 import { magnusService } from '../services/magnus.service.js';
 import { fraudService } from '../services/fraud.service.js';
-import { notificationService } from '../services/notification.service.js';
 
 export async function syncCdrToPortal() {
   const db = await magnusService.getDb();
@@ -53,7 +52,6 @@ export async function syncBalances() {
       create: { userId: user.id, balance },
       update: { balance },
     });
-    await notificationService.lowBalanceAlert(user.id, balance);
   }
 }
 

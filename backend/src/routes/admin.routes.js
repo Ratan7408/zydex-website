@@ -260,4 +260,16 @@ router.delete('/rates/markups/:id', async (req, res) => {
   res.json({ success: true });
 });
 
+/** Fix SIP accounts with missing/invalid Caller ID (carrier 403 declines). */
+router.post('/sip/repair-callerids', async (req, res) => {
+  const results = await magnusService.repairUsersWithoutCallerId();
+  res.json({
+    success: true,
+    repaired: results.filter((r) => r.applied).length,
+    skipped: results.filter((r) => r.alreadySet).length,
+    failed: results.filter((r) => !r.ok).length,
+    rows: results,
+  });
+});
+
 export default router;

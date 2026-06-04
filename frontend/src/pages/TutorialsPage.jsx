@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
+import { WHATSAPP_SUPPORT, WHATSAPP_DISPLAY } from '../constants/brand';
 
 const DEFAULT_SUPPORT = 'https://t.me/zydex_p1';
 const SIP_PORT = '5060';
@@ -134,16 +135,27 @@ export default function TutorialsPage() {
             Get your SIP account, install a softphone, and start calling in minutes.
           </p>
         </div>
-        <a
-          href={telegramHref}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#229ED9] hover:bg-[#1a8bc4] text-white font-semibold rounded-xl shadow-md"
-        >
-          <MessageCircle size={20} />
-          Contact Support on Telegram
-          <ExternalLink size={16} />
-        </a>
+        <div className="flex flex-wrap gap-2">
+          <a
+            href={telegramHref}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#229ED9] hover:bg-[#1a8bc4] text-white font-semibold rounded-xl shadow-md"
+          >
+            <MessageCircle size={20} />
+            Telegram
+            <ExternalLink size={16} />
+          </a>
+          <a
+            href={WHATSAPP_SUPPORT}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#25D366] hover:bg-[#1da851] text-white font-semibold rounded-xl shadow-md"
+          >
+            WhatsApp
+            <ExternalLink size={16} />
+          </a>
+        </div>
       </div>
 
       <div className="flex flex-wrap gap-2 mb-6">
@@ -382,17 +394,28 @@ export default function TutorialsPage() {
             Need help?
           </h2>
           <p className="text-sm text-slate-600 dark:text-slate-400 mt-2">
-            Message us on Telegram for setup help, billing questions, or technical support.
+            Message us on Telegram or WhatsApp for setup help, billing questions, or technical support.
           </p>
-          <a
-            href={telegramHref}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 mt-4 px-6 py-3 bg-[#229ED9] text-white font-semibold rounded-xl hover:bg-[#1a8bc4]"
-          >
-            @zydex_p1 on Telegram
-            <ExternalLink size={16} />
-          </a>
+          <div className="flex flex-wrap gap-3 mt-4">
+            <a
+              href={telegramHref}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 px-6 py-3 bg-[#229ED9] text-white font-semibold rounded-xl hover:bg-[#1a8bc4]"
+            >
+              @zydex_p1 on Telegram
+              <ExternalLink size={16} />
+            </a>
+            <a
+              href={WHATSAPP_SUPPORT}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 px-6 py-3 bg-[#25D366] text-white font-semibold rounded-xl hover:bg-[#1da851]"
+            >
+              {WHATSAPP_DISPLAY} on WhatsApp
+              <ExternalLink size={16} />
+            </a>
+          </div>
         </section>
       </div>
     </div>

@@ -2,6 +2,15 @@ import crypto from 'crypto';
 import mysql from 'mysql2/promise';
 import { config } from '../config/index.js';
 
+/** US outbound CLI: 10 digits (→ 1XXXXXXXXXX) or 11 digits starting with 1. */
+export function normalizeOutboundCallerId(input) {
+  if (input == null || input === '') return '';
+  const d = String(input).replace(/\D/g, '');
+  if (d.length === 10) return `1${d}`;
+  if (d.length === 11 && d.startsWith('1')) return d;
+  return '';
+}
+
 export class MagnusService {
   constructor() {
     this.baseUrl = config.magnus.url.replace(/\/$/, '');
@@ -251,11 +260,68 @@ export class MagnusService {
     });
   }
 
+  /**
+   * Many carriers return SIP 403 when outbound CLI is empty/invalid.
+   * Sets callerid + cid_number when missing and a default is configured.
+   */
+  async ensureOutboundCallerId(sipId, preferredCallerId) {
+    if (!sipId) return { ok: false, reason: 'no_sip' };
+
+    const db = await this.getDb();
+    const [rows] = await db.execute(
+      'SELECT callerid, host FROM pkg_sip WHERE id = ? LIMIT 1',
+      [sipId]
+    );
+    const row = rows[0];
+    if (!row) return { ok: false, reason: 'sip_not_found' };
+    if (this.isIpAuthHost(row.host)) return { ok: true, skipped: 'ip_auth' };
+
+    const current = normalizeOutboundCallerId(row.callerid);
+    if (current) return { ok: true, callerId: current, alreadySet: true };
+
+    const fromPreferred = normalizeOutboundCallerId(preferredCallerId);
+    const fromDefault = normalizeOutboundCallerId(config.sip.defaultOutboundCallerId);
+    const callerId = fromPreferred || fromDefault;
+    if (!callerId) return { ok: false, reason: 'no_default_callerid' };
+
+    const result = await this.setCallerId(sipId, callerId);
+    if (result?.success === false) {
+      return { ok: false, reason: 'magnus_save_failed', error: result };
+    }
+    return { ok: true, callerId, applied: true };
+  }
+
+  /** Backfill Caller ID for SIP accounts missing or invalid CLI. */
+  async repairUsersWithoutCallerId() {
+    const db = await this.getDb();
+    const [rows] = await db.execute(
+      `SELECT s.id AS sip_id, u.username, s.callerid, s.host
+       FROM pkg_sip s
+       JOIN pkg_user u ON s.id_user = u.id
+       WHERE s.host IS NULL OR s.host = '' OR s.host = 'dynamic'`
+    );
+    const results = [];
+    for (const row of rows) {
+      const valid = normalizeOutboundCallerId(row.callerid);
+      if (valid) {
+        results.push({ username: row.username, sipId: row.sip_id, ok: true, callerId: valid, alreadySet: true });
+        continue;
+      }
+      const r = await this.ensureOutboundCallerId(row.sip_id);
+      results.push({ username: row.username, sipId: row.sip_id, ...r });
+    }
+    return results;
+  }
+
   /** IP-to-IP: peer authenticates by IP — no SIP password */
   async setCallerId(sipId, callerId) {
+    const normalized = normalizeOutboundCallerId(callerId);
+    if (!normalized) {
+      throw new Error('Invalid Caller ID');
+    }
     return this.updateSip(sipId, {
-      callerid: callerId,
-      cid_number: callerId,
+      callerid: normalized,
+      cid_number: normalized,
     });
   }
 

@@ -28,6 +28,8 @@ export const config = {
   frontendUrl: process.env.FRONTEND_URL || 'http://localhost:5173',
   sip: {
     server: process.env.SIP_SERVER || process.env.VOIP_SERVER_IP || '103.252.119.18',
+    /** If set, applied to new Magnus SIP accounts that have no Caller ID (many carriers reject with 403). */
+    defaultOutboundCallerId: (process.env.DEFAULT_OUTBOUND_CALLER_ID || '').replace(/\D/g, ''),
   },
   signupBonus: parseFloat(process.env.SIGNUP_BONUS_CREDIT || '1'),
   admin: {

@@ -83,7 +83,18 @@ router.post('/signup', async (req, res) => {
     const passwordHash = await bcrypt.hash(data.password, 12);
 
     let balance = 0;
+    let sipCallerId = null;
+    let magnusRow = null;
     if (magnusUserId) {
+      magnusRow = await magnusService.getUserByUsername(data.username);
+      if (magnusRow?.sip_id) {
+        const cidResult = await magnusService.ensureOutboundCallerId(magnusRow.sip_id);
+        if (cidResult.ok && cidResult.callerId) {
+          sipCallerId = cidResult.callerId;
+        } else if (!cidResult.alreadySet && cidResult.reason === 'no_default_callerid') {
+          console.warn(`Signup: no Caller ID for ${data.username} — set DEFAULT_OUTBOUND_CALLER_ID`);
+        }
+      }
       if (signupBonus > 0) {
         const refill = await magnusService.grantSignupBonus(magnusUserId, signupBonus);
         if (!refill.ok) {
@@ -104,10 +115,11 @@ router.post('/signup', async (req, res) => {
         wallet: { create: { balance } },
         sipAccounts: {
           create: {
-            magnusSipId: null,
+            magnusSipId: magnusRow?.sip_id ?? null,
             username: data.username,
             secret: data.password,
             host: 'dynamic',
+            callerId: sipCallerId,
           },
         },
       },
@@ -122,7 +134,7 @@ router.post('/signup', async (req, res) => {
 
     await notificationService
       .notifyAdmin(
-        `✅ New signup\nUser: ${data.username}\nPlan ID: ${data.id_plan}\nBalance: $${balance.toFixed(2)}`
+        `✅ New signup\nUser: ${data.username}\nPlan: ${plan.name}\nBalance: $${balance.toFixed(2)}`
       )
       .catch(() => {});
 
@@ -224,12 +236,29 @@ router.post('/login', async (req, res) => {
       return res.status(403).json({ error: 'Account is blocked' });
     }
 
+    if (magnusUser.sip_id) {
+      await magnusService.ensureOutboundCallerId(magnusUser.sip_id);
+    }
+
     const balance = await magnusService.getBalance(magnusUser.id);
+    const magnusFresh = await magnusService.getUserByUsername(username);
+
     await prisma.wallet.upsert({
       where: { userId: user.id },
       create: { userId: user.id, balance },
       update: { balance },
     });
+
+    if (magnusFresh?.sip_id) {
+      await prisma.sipAccount.updateMany({
+        where: { userId: user.id },
+        data: {
+          magnusSipId: magnusFresh.sip_id,
+          callerId: magnusFresh.callerid || null,
+          host: magnusFresh.host || 'dynamic',
+        },
+      });
+    }
 
     const token = jwt.sign(
       { sub: user.id, username: user.username, role: user.role },
@@ -247,10 +276,10 @@ router.post('/login', async (req, res) => {
         balance,
         magnusUserId: magnusUser.id,
         sip: {
-          username: magnusUser.sip_name || username,
-          secret: magnusUser.sip_secret,
-          host: magnusUser.host || 'dynamic',
-          callerId: magnusUser.callerid,
+          username: magnusFresh?.sip_name || username,
+          secret: magnusFresh?.sip_secret,
+          host: magnusFresh?.host || 'dynamic',
+          callerId: magnusFresh?.callerid,
         },
       },
     });

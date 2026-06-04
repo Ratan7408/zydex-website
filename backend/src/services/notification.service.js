@@ -14,7 +14,7 @@ export class NotificationService {
     }
   }
 
-  /** Admin Telegram channel — new signups, deposits, alerts (uses TELEGRAM_BOT_TOKEN + TELEGRAM_CHAT_ID) */
+  /** Admin Telegram — signup + successful balance top-up only (TELEGRAM_BOT_TOKEN + TELEGRAM_CHAT_ID) */
   async notifyAdmin(text) {
     return this.sendTelegram(text);
   }
@@ -26,7 +26,9 @@ export class NotificationService {
 
   async sendTelegram(text) {
     const { botToken, chatId } = config.telegram || {};
-    if (!botToken || !chatId) return;
+    if (!botToken || !chatId) {
+      return { ok: false, error: 'telegram_not_configured' };
+    }
     const res = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -36,29 +38,14 @@ export class NotificationService {
         disable_web_page_preview: true,
       }),
     });
-    if (!res.ok) {
-      const err = await res.text();
-      console.error('[telegram]', err.slice(0, 200));
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok || !body.ok) {
+      console.error('[telegram]', JSON.stringify(body).slice(0, 300));
+      return { ok: false, error: body.description || 'telegram_send_failed' };
     }
+    return { ok: true, messageId: body.result?.message_id };
   }
 
-  async lowBalanceAlert(userId, balance) {
-    if (balance > 5) return;
-    await this.notifyUser(
-      userId,
-      'low_balance',
-      'Low Balance Warning',
-      `Your balance is $${balance.toFixed(2)}. Please add funds to continue calling.`
-    );
-    if (balance <= 1) {
-      const user = await prisma.user.findUnique({ where: { id: userId } });
-      if (user) {
-        await this.notifyAdmin(
-          `⚠️ Low balance\nUser: ${user.username}\nBalance: $${balance.toFixed(2)}`
-        ).catch(() => {});
-      }
-    }
-  }
 }
 
 export const notificationService = new NotificationService();

@@ -1,5 +1,7 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
+import SupportFab from './components/SupportFab';
+import TelegramChannelPopup from './components/TelegramChannelPopup';
 import LandingPage from './pages/LandingPage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
@@ -24,6 +26,8 @@ function PrivateRoute({ children, adminOnly }) {
 export default function App() {
   const { user } = useAuth();
   return (
+    <>
+    <TelegramChannelPopup />
     <Routes>
       <Route path="/" element={user ? <Navigate to="/dashboard" /> : <LandingPage />} />
       <Route path="/login" element={user ? <Navigate to="/dashboard" /> : <LoginPage />} />
@@ -53,5 +57,7 @@ export default function App() {
       </Route>
       <Route path="*" element={<Navigate to="/dashboard" />} />
     </Routes>
+    {!user && <SupportFab />}
+    </>
   );
 }
