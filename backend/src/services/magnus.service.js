@@ -182,6 +182,13 @@ export class MagnusService {
     return rows;
   }
 
+  async updateUserPlan(magnusUserId, id_plan) {
+    return this.apiRequest('user', 'save', {
+      id: magnusUserId,
+      id_plan,
+    });
+  }
+
   async getRates(planId) {
     const db = await this.getDb();
     const [rows] = await db.execute(

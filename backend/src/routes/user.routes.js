@@ -5,9 +5,14 @@ import { magnusService, normalizeOutboundCallerId } from '../services/magnus.ser
 import { cryptoService } from '../services/crypto.service.js';
 import { config } from '../config/index.js';
 import prisma from '../utils/prisma.js';
+import { formatPlanRow } from '../constants/plans.js';
 
 const router = Router();
 router.use(authRequired, loadUser);
+
+const switchPlanSchema = z.object({
+  id_plan: z.coerce.number().int().positive('Please select a plan'),
+});
 
 router.get('/dashboard', async (req, res) => {
   const user = req.dbUser;
@@ -22,9 +27,15 @@ router.get('/dashboard', async (req, res) => {
     take: 10,
   });
 
-  const planName = magnusUser?.id_plan
-    ? (await magnusService.getPlans()).find((p) => p.id === magnusUser.id_plan)?.name
-    : null;
+  const signupPlans = await prisma.signupPlan.findMany({
+    where: { active: true },
+    orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
+  });
+  const currentSignupPlan = signupPlans.find((p) => p.magnusPlanId === magnusUser?.id_plan);
+  const planName = currentSignupPlan?.name
+    ?? (magnusUser?.id_plan
+      ? (await magnusService.getPlans()).find((p) => p.id === magnusUser.id_plan)?.name
+      : null);
 
   await prisma.wallet.upsert({
     where: { userId: user.id },
@@ -36,6 +47,8 @@ router.get('/dashboard', async (req, res) => {
     greeting: `Welcome back, ${user.username}!`,
     balance,
     planName,
+    currentPlanId: magnusUser?.id_plan ?? null,
+    currentPlan: currentSignupPlan ? formatPlanRow(currentSignupPlan) : null,
     accountStatus: magnusUser?.active === 1 ? 'Active' : 'Inactive',
     totalCalls: stats.totalCalls,
     totalDeposits: stats.totalDeposits,
@@ -213,6 +226,71 @@ router.post('/sip/callerid', async (req, res) => {
     message: 'Caller ID updated',
     ...buildSipResponse(updated, req.dbUser.username),
   });
+});
+
+router.get('/plans', async (req, res) => {
+  const plans = await prisma.signupPlan.findMany({
+    where: { active: true },
+    orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
+  });
+  const magnusUser = await magnusService.getUserByUsername(req.dbUser.username);
+  res.json({
+    currentPlanId: magnusUser?.id_plan ?? null,
+    rows: plans.map(formatPlanRow),
+  });
+});
+
+router.post('/plan/switch', async (req, res) => {
+  try {
+    const { id_plan } = switchPlanSchema.parse(req.body);
+    const user = req.dbUser;
+
+    if (!user.magnusUserId) {
+      return res.status(400).json({ error: 'Your account is not linked to a VOIP plan yet' });
+    }
+
+    const plan = await prisma.signupPlan.findFirst({
+      where: { magnusPlanId: id_plan, active: true },
+    });
+    if (!plan) {
+      return res.status(400).json({ error: 'Invalid or inactive plan selected' });
+    }
+
+    const magnusUser = await magnusService.getUserByUsername(user.username);
+    if (magnusUser?.id_plan === id_plan) {
+      return res.json({
+        success: true,
+        message: `You are already on ${plan.name}`,
+        planName: plan.name,
+        currentPlan: formatPlanRow(plan),
+      });
+    }
+
+    const result = await magnusService.updateUserPlan(user.magnusUserId, id_plan);
+    if (result?.success === false) {
+      const err = result.errors || result.msg || 'Failed to switch plan';
+      const msg =
+        typeof err === 'string'
+          ? err
+          : typeof err === 'object'
+            ? Object.values(err).flat().join(', ') || JSON.stringify(err)
+            : 'Failed to switch plan';
+      return res.status(400).json({ error: msg });
+    }
+
+    res.json({
+      success: true,
+      message: `Plan switched to ${plan.name}`,
+      planName: plan.name,
+      currentPlan: formatPlanRow(plan),
+    });
+  } catch (err) {
+    if (err.name === 'ZodError') {
+      return res.status(400).json({ error: err.errors.map((e) => e.message).join('. ') });
+    }
+    console.error('Plan switch error:', err);
+    res.status(500).json({ error: err.message || 'Failed to switch plan' });
+  }
 });
 
 router.get('/balance', async (req, res) => {

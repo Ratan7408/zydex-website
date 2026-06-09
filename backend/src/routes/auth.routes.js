@@ -7,6 +7,7 @@ import { magnusService } from '../services/magnus.service.js';
 import prisma from '../utils/prisma.js';
 import { authRequired, loadUser } from '../middleware/auth.js';
 import { notificationService } from '../services/notification.service.js';
+import { formatPlanRow } from '../constants/plans.js';
 
 const router = Router();
 
@@ -33,7 +34,7 @@ router.get('/plans', async (req, res) => {
     where: { active: true },
     orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
   });
-  res.json({ rows: plans });
+  res.json({ rows: plans.map(formatPlanRow) });
 });
 
 router.post('/signup', async (req, res) => {

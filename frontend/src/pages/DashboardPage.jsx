@@ -1,21 +1,67 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Wallet, Shield, Phone, Banknote, Gift, KeyRound } from 'lucide-react';
+import { Wallet, Shield, Phone, Banknote, Gift, KeyRound, RefreshCw } from 'lucide-react';
 import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
+import { PlanSelector } from '../components/PlanSelector';
 
 export default function DashboardPage() {
   const { user, setUser } = useAuth();
   const [data, setData] = useState(null);
+  const [plans, setPlans] = useState([]);
+  const [selectedPlan, setSelectedPlan] = useState('');
+  const [planMessage, setPlanMessage] = useState('');
+  const [planError, setPlanError] = useState('');
+  const [switchingPlan, setSwitchingPlan] = useState(false);
 
-  useEffect(() => {
+  const loadDashboard = () =>
     api('/user/dashboard')
       .then((d) => {
         setData(d);
         setUser((u) => (u ? { ...u, balance: d.balance } : u));
+        if (d.currentPlanId) setSelectedPlan(String(d.currentPlanId));
       })
       .catch(console.error);
+
+  const loadPlans = () =>
+    api('/user/plans')
+      .then((r) => {
+        setPlans(r.rows || []);
+        if (r.currentPlanId) setSelectedPlan(String(r.currentPlanId));
+      })
+      .catch(console.error);
+
+  useEffect(() => {
+    loadDashboard();
+    loadPlans();
   }, [setUser]);
+
+  const handlePlanSwitch = async () => {
+    setPlanError('');
+    setPlanMessage('');
+    if (!selectedPlan) {
+      setPlanError('Please select a plan');
+      return;
+    }
+    if (String(data?.currentPlanId) === selectedPlan) {
+      setPlanMessage('You are already on this plan');
+      return;
+    }
+    setSwitchingPlan(true);
+    try {
+      const result = await api('/user/plan/switch', {
+        method: 'POST',
+        body: JSON.stringify({ id_plan: Number(selectedPlan) }),
+      });
+      setPlanMessage(result.message || 'Plan updated');
+      await loadDashboard();
+      await loadPlans();
+    } catch (err) {
+      setPlanError(err.message);
+    } finally {
+      setSwitchingPlan(false);
+    }
+  };
 
   const balance = parseFloat(data?.balance ?? user?.balance ?? 0);
 
@@ -31,7 +77,7 @@ export default function DashboardPage() {
       <h1 className="text-2xl font-bold mb-2 text-emerald-950 dark:text-emerald-50">Welcome, {user?.username}!</h1>
       {data?.planName && (
         <p className="text-emerald-700 dark:text-emerald-300 mb-4">
-          Plan: <span className="font-medium text-emerald-900 dark:text-emerald-100">{data.planName}</span>
+          Current plan: <span className="font-medium text-emerald-900 dark:text-emerald-100">{data.planName}</span>
         </p>
       )}
 
@@ -44,6 +90,36 @@ export default function DashboardPage() {
           </div>
         ))}
       </div>
+
+      {plans.length > 0 && (
+        <div className="bg-white dark:bg-zydex-bg-card rounded-2xl border border-emerald-200 dark:border-zydex-border p-6 mb-8 text-emerald-950 dark:text-emerald-50">
+          <h2 className="text-lg font-semibold mb-1 text-emerald-950 dark:text-emerald-50">Your Route Plan</h2>
+          <p className="text-sm text-emerald-700 dark:text-emerald-300 mb-4">
+            Switch between Zydex and Zydex Premium anytime. Changes apply immediately to your account.
+          </p>
+          {planError && <div className="mb-3 p-3 bg-red-50 text-red-700 rounded-lg text-sm">{planError}</div>}
+          {planMessage && (
+            <div className="mb-3 p-3 bg-lime-50 dark:bg-lime-950/30 text-emerald-800 dark:text-lime-200 rounded-lg text-sm">
+              {planMessage}
+            </div>
+          )}
+          <PlanSelector
+            plans={plans}
+            value={selectedPlan}
+            onChange={setSelectedPlan}
+            disabled={switchingPlan}
+          />
+          <button
+            type="button"
+            onClick={handlePlanSwitch}
+            disabled={switchingPlan || !selectedPlan}
+            className="mt-4 inline-flex items-center gap-2 bg-lime-500 hover:bg-lime-400 text-zydex-bg px-5 py-2.5 rounded-lg font-semibold disabled:opacity-50"
+          >
+            <RefreshCw size={18} className={switchingPlan ? 'animate-spin' : ''} />
+            {switchingPlan ? 'Switching...' : 'Switch Plan'}
+          </button>
+        </div>
+      )}
 
       <div className="grid md:grid-cols-2 gap-4 mb-8">
         <Link

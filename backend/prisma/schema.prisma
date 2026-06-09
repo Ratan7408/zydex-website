@@ -144,8 +144,10 @@ model Notification {
 model SignupPlan {
   id           String   @id @default(uuid())
   magnusPlanId Int
+  slug         String?  @unique
   name         String
   description  String?
+  benefits     String?
   active       Boolean  @default(true)
   sortOrder    Int      @default(0)
   createdAt    DateTime @default(now())

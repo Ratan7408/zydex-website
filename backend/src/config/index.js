@@ -12,6 +12,7 @@ export const config = {
     apiKey: process.env.MAGNUS_API_KEY || '',
     apiSecret: process.env.MAGNUS_API_SECRET || '',
     defaultPlanId: parseInt(process.env.MAGNUS_DEFAULT_PLAN_ID || '1', 10),
+    premiumPlanId: parseInt(process.env.MAGNUS_PREMIUM_PLAN_ID || '0', 10) || null,
     db: {
       host: process.env.MAGNUS_DB_HOST || '127.0.0.1',
       database: process.env.MAGNUS_DB_NAME || 'mbilling',

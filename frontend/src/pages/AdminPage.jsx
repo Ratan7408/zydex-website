@@ -22,7 +22,7 @@ export default function AdminPage() {
   const [fraudAlerts, setFraudAlerts] = useState([]);
   const [signupPlans, setSignupPlans] = useState([]);
   const [magnusPlans, setMagnusPlans] = useState([]);
-  const [newPlan, setNewPlan] = useState({ magnusPlanId: '', name: '', description: '' });
+  const [newPlan, setNewPlan] = useState({ magnusPlanId: '', name: '', description: '', benefits: '' });
   const [rateMarkups, setRateMarkups] = useState([]);
   const [rateForm, setRateForm] = useState({
     prefix: '1',
@@ -102,8 +102,19 @@ export default function AdminPage() {
 
   const addPlan = async (e) => {
     e.preventDefault();
-    await api('/admin/plans', { method: 'POST', body: JSON.stringify(newPlan) });
-    setNewPlan({ magnusPlanId: '', name: '', description: '' });
+    const benefits = newPlan.benefits
+      ? JSON.stringify(
+          newPlan.benefits
+            .split('\n')
+            .map((s) => s.trim())
+            .filter(Boolean)
+        )
+      : null;
+    await api('/admin/plans', {
+      method: 'POST',
+      body: JSON.stringify({ ...newPlan, benefits }),
+    });
+    setNewPlan({ magnusPlanId: '', name: '', description: '', benefits: '' });
     loadPlans();
   };
 
@@ -292,17 +303,17 @@ export default function AdminPage() {
           <div className="bg-white dark:bg-zydex-bg-card rounded-xl border p-4">
             <h2 className="font-semibold mb-4 dark:text-white">Add signup plan</h2>
             <p className="text-sm text-slate-500 mb-4">
-              Plans shown on the registration page. Link each to a Magnus plan ID.
+              Plans shown on registration and dashboard. Link each to a Magnus plan ID. Add one benefit per line.
             </p>
-            <form onSubmit={addPlan} className="grid md:grid-cols-4 gap-3">
+            <form onSubmit={addPlan} className="grid md:grid-cols-2 gap-3">
               <select
                 value={newPlan.magnusPlanId}
                 onChange={(e) => {
                   const mp = magnusPlans.find((p) => String(p.id) === e.target.value);
                   setNewPlan({
+                    ...newPlan,
                     magnusPlanId: e.target.value,
                     name: mp?.name || newPlan.name,
-                    description: newPlan.description,
                   });
                 }}
                 className="border rounded-lg px-3 py-2 dark:bg-slate-800"
@@ -323,12 +334,18 @@ export default function AdminPage() {
                 required
               />
               <input
-                placeholder="Description (optional)"
+                placeholder="Short description (optional)"
                 value={newPlan.description}
                 onChange={(e) => setNewPlan({ ...newPlan, description: e.target.value })}
                 className="border rounded-lg px-3 py-2 dark:bg-slate-800"
               />
-              <button type="submit" className="bg-emerald-600 text-white rounded-lg px-4 py-2 font-semibold">
+              <textarea
+                placeholder="Benefits (one per line)"
+                value={newPlan.benefits}
+                onChange={(e) => setNewPlan({ ...newPlan, benefits: e.target.value })}
+                className="border rounded-lg px-3 py-2 dark:bg-slate-800 md:col-span-2 min-h-[88px]"
+              />
+              <button type="submit" className="bg-emerald-600 text-white rounded-lg px-4 py-2 font-semibold md:col-span-2">
                 Add Plan
               </button>
             </form>
@@ -339,15 +356,26 @@ export default function AdminPage() {
                 <tr>
                   <th className="p-3 text-left">Name</th>
                   <th className="p-3 text-left">Magnus ID</th>
+                  <th className="p-3 text-left">Benefits</th>
                   <th className="p-3 text-left">Status</th>
                   <th className="p-3 text-left">Action</th>
                 </tr>
               </thead>
               <tbody>
-                {signupPlans.map((p) => (
+                {signupPlans.map((p) => {
+                  let benefitLines = [];
+                  try {
+                    benefitLines = p.benefits ? JSON.parse(p.benefits) : [];
+                  } catch {
+                    benefitLines = [];
+                  }
+                  return (
                   <tr key={p.id} className="border-t dark:border-slate-800">
                     <td className="p-3 dark:text-white">{p.name}</td>
                     <td className="p-3">{p.magnusPlanId}</td>
+                    <td className="p-3 text-xs text-slate-500 max-w-xs">
+                      {benefitLines.length ? benefitLines.join(' · ') : '—'}
+                    </td>
                     <td className="p-3">{p.active ? 'Active' : 'Hidden'}</td>
                     <td className="p-3">
                       <button
@@ -358,7 +386,8 @@ export default function AdminPage() {
                       </button>
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>

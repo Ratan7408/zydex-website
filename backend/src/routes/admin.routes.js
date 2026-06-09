@@ -151,15 +151,17 @@ router.get('/plans/magnus', async (req, res) => {
 });
 
 router.post('/plans', async (req, res) => {
-  const { magnusPlanId, name, description, active, sortOrder } = req.body;
+  const { magnusPlanId, name, description, benefits, slug, active, sortOrder } = req.body;
   if (!magnusPlanId || !name) {
     return res.status(400).json({ error: 'magnusPlanId and name are required' });
   }
   const plan = await prisma.signupPlan.create({
     data: {
       magnusPlanId: parseInt(magnusPlanId, 10),
+      slug: slug || null,
       name,
       description: description || null,
+      benefits: benefits || null,
       active: active !== false,
       sortOrder: parseInt(sortOrder || '0', 10),
     },
@@ -171,12 +173,14 @@ router.post('/plans', async (req, res) => {
 });
 
 router.put('/plans/:id', async (req, res) => {
-  const { name, description, active, sortOrder, magnusPlanId } = req.body;
+  const { name, description, benefits, slug, active, sortOrder, magnusPlanId } = req.body;
   const plan = await prisma.signupPlan.update({
     where: { id: req.params.id },
     data: {
       ...(name && { name }),
       ...(description !== undefined && { description }),
+      ...(benefits !== undefined && { benefits }),
+      ...(slug !== undefined && { slug: slug || null }),
       ...(active !== undefined && { active }),
       ...(sortOrder !== undefined && { sortOrder: parseInt(sortOrder, 10) }),
       ...(magnusPlanId && { magnusPlanId: parseInt(magnusPlanId, 10) }),

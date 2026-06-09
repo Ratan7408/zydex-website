@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../api/client';
 import { BrandLogo } from '../components/BrandLogo';
+import { PlanSelector } from '../components/PlanSelector';
 
 export default function RegisterPage() {
   const [form, setForm] = useState({
@@ -99,23 +100,18 @@ export default function RegisterPage() {
           {field('confirmPassword', 'Confirm Password', 'password', true, 'Please re-enter your password.')}
 
           <div>
-            <label className="block text-sm font-medium mb-1 text-emerald-900 dark:text-emerald-200">
+            <label className="block text-sm font-medium mb-2 text-emerald-900 dark:text-emerald-200">
               Select Your Plan <span className="text-red-500">*</span>
             </label>
-            <select
+            <p className="text-xs text-emerald-600/80 dark:text-emerald-400/80 mb-3">
+              Compare route coverage below. You can switch plans anytime after signing in.
+            </p>
+            <PlanSelector
+              plans={plans}
               value={form.id_plan}
-              onChange={(e) => setForm({ ...form, id_plan: e.target.value })}
-              className={`${inputClass} bg-white`}
-              required
-            >
-              <option value="">Select a Plan</option>
-              {plans.map((p) => (
-                <option key={p.id} value={p.magnusPlanId}>
-                  {p.name}
-                  {p.description ? ` — ${p.description}` : ''}
-                </option>
-              ))}
-            </select>
+              onChange={(id_plan) => setForm({ ...form, id_plan })}
+              disabled={loading || plans.length === 0}
+            />
           </div>
 
           <button

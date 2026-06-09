@@ -11,6 +11,7 @@ import webhookRoutes, { handleOxaPayCryptoWebhook } from './routes/webhook.route
 import publicRoutes from './routes/public.routes.js';
 import prisma from './utils/prisma.js';
 import { startBackgroundJobs } from './jobs/sync.job.js';
+import { ensureDefaultPlans } from './services/plan.service.js';
 
 const app = express();
 app.set('trust proxy', 1);
@@ -94,19 +95,7 @@ async function bootstrapAdmin() {
     }
   }
 
-  const planCount = await prisma.signupPlan.count();
-  if (planCount === 0) {
-    await prisma.signupPlan.create({
-      data: {
-        magnusPlanId: config.magnus.defaultPlanId,
-        name: 'Zydex Default Plan',
-        description: 'Standard VOIP plan',
-        active: true,
-        sortOrder: 0,
-      },
-    });
-    console.log('Default signup plan created');
-  }
+  await ensureDefaultPlans();
 }
 
 async function start() {
