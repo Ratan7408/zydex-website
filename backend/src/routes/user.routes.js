@@ -31,11 +31,13 @@ router.get('/dashboard', async (req, res) => {
     where: { active: true },
     orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
   });
+  const magnusPlans = await magnusService.getPlans();
   const currentSignupPlan = signupPlans.find((p) => p.magnusPlanId === magnusUser?.id_plan);
-  const planName = currentSignupPlan?.name
-    ?? (magnusUser?.id_plan
-      ? (await magnusService.getPlans()).find((p) => p.id === magnusUser.id_plan)?.name
-      : null);
+  const magnusPlanRow = magnusUser?.id_plan
+    ? magnusPlans.find((p) => p.id === magnusUser.id_plan)
+    : null;
+  const planName = currentSignupPlan?.name ?? magnusPlanRow?.name ?? null;
+  const planManagedByMagnus = !!(magnusUser?.id_plan && !currentSignupPlan);
 
   await prisma.wallet.upsert({
     where: { userId: user.id },
@@ -43,12 +45,24 @@ router.get('/dashboard', async (req, res) => {
     update: { balance },
   });
 
+  if (magnusUser?.sip_id) {
+    await prisma.sipAccount.updateMany({
+      where: { userId: user.id },
+      data: {
+        magnusSipId: magnusUser.sip_id,
+        callerId: magnusUser.callerid || null,
+        host: magnusUser.host || 'dynamic',
+      },
+    });
+  }
+
   res.json({
     greeting: `Welcome back, ${user.username}!`,
     balance,
     planName,
     currentPlanId: magnusUser?.id_plan ?? null,
     currentPlan: currentSignupPlan ? formatPlanRow(currentSignupPlan) : null,
+    planManagedByMagnus,
     accountStatus: magnusUser?.active === 1 ? 'Active' : 'Inactive',
     totalCalls: stats.totalCalls,
     totalDeposits: stats.totalDeposits,
@@ -100,8 +114,8 @@ router.get('/rates', async (req, res) => {
       markups.find((m) =>
         r.destination?.toLowerCase().includes(String(m.label || m.prefix).toLowerCase())
       );
+    // Always show this user's Magnus plan rate on the website
     const buyRate = parseFloat(r.rateinitial || 0);
-    const customRate = markup ? parseFloat(markup.sellRate) : null;
     const displayPrefix = r.dialprefix ? String(r.dialprefix).replace(/^\+/, '') : '—';
     const countryLabel = markup?.label || r.destination || 'Unknown';
 
@@ -110,16 +124,15 @@ router.get('/rates', async (req, res) => {
       country: countryLabel,
       billing: 'prepaid',
       buyRate,
-      userCustomRate: customRate,
-      rate: customRate ?? buyRate,
-      hasCustomRate: !!markup,
+      userCustomRate: buyRate,
+      rate: buyRate,
+      hasCustomRate: true,
       initBlock: r.initblock,
       block: r.block,
     };
   });
 
-  const customFirst = [...rows].sort((a, b) => Number(b.hasCustomRate) - Number(a.hasCustomRate));
-  res.json({ rows: customFirst.filter((r) => r.hasCustomRate).length ? customFirst : rows });
+  res.json({ rows });
 });
 
 function buildSipResponse(magnusUser, username) {
@@ -234,8 +247,15 @@ router.get('/plans', async (req, res) => {
     orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
   });
   const magnusUser = await magnusService.getUserByUsername(req.dbUser.username);
+  const magnusPlans = await magnusService.getPlans();
+  const currentSignupPlan = plans.find((p) => p.magnusPlanId === magnusUser?.id_plan);
+  const magnusPlanRow = magnusUser?.id_plan
+    ? magnusPlans.find((p) => p.id === magnusUser.id_plan)
+    : null;
   res.json({
     currentPlanId: magnusUser?.id_plan ?? null,
+    currentPlanName: currentSignupPlan?.name ?? magnusPlanRow?.name ?? null,
+    planManagedByMagnus: !!(magnusUser?.id_plan && !currentSignupPlan),
     rows: plans.map(formatPlanRow),
   });
 });
@@ -398,7 +418,11 @@ router.get('/notifications', async (req, res) => {
 
 router.get('/calls/live', async (req, res) => {
   try {
-    const result = await magnusService.getOnlineCalls();
+    // Users must only see their own live calls — never the full panel
+    const result = await magnusService.getOnlineCallsForUser(
+      req.dbUser.username,
+      req.dbUser.magnusUserId || null
+    );
     res.json(result);
   } catch (err) {
     res.json({ rows: [], error: err.message });

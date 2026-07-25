@@ -128,6 +128,44 @@ export class MagnusService {
     });
   }
 
+  /** Deposit credit: Magnus refill API first, direct DB insert if API/user lookup fails */
+  async addCreditWithFallback(magnusUserId, amount, description = 'Zydex crypto top-up') {
+    const db = await this.getDb();
+    const [userRows] = await db.execute('SELECT id FROM pkg_user WHERE id = ? LIMIT 1', [magnusUserId]);
+    if (!userRows[0]?.id) {
+      return { ok: false, error: `Magnus user ${magnusUserId} not found` };
+    }
+
+    try {
+      const apiResult = await this.addCredit(magnusUserId, amount, description);
+      if (apiResult?.success !== false) {
+        const [rows] = await db.execute(
+          'SELECT id FROM pkg_refill WHERE id_user = ? ORDER BY id DESC LIMIT 1',
+          [magnusUserId]
+        );
+        return { ok: true, method: 'api', refillId: rows[0]?.id || null };
+      }
+    } catch (err) {
+      console.warn('Deposit refill API error, trying DB fallback:', err.message?.slice(0, 120));
+    }
+
+    try {
+      const oldCredit = await this.getBalance(magnusUserId);
+      const fullDescription = description.includes('Old credit')
+        ? description
+        : `${description}, Old credit ${oldCredit}`;
+      const [insert] = await db.execute(
+        `INSERT INTO pkg_refill (id_user, date, credit, description, refill_type, payment)
+         VALUES (?, NOW(), ?, ?, 0, 1)`,
+        [magnusUserId, amount, fullDescription]
+      );
+      await db.execute('UPDATE pkg_user SET credit = credit + ? WHERE id = ?', [amount, magnusUserId]);
+      return { ok: true, method: 'sql', refillId: insert.insertId || null };
+    } catch (err) {
+      return { ok: false, error: err.message };
+    }
+  }
+
   /** Signup bonus: Magnus refill API first, direct DB insert if API fails */
   async grantSignupBonus(magnusUserId, amount) {
     const description = `Zydex signup bonus — $${amount.toFixed(2)} free test credit`;
@@ -207,6 +245,49 @@ export class MagnusService {
 
   async getOnlineCalls() {
     return this.apiRequest('callOnLine', 'read', { page: 1, start: 0, limit: 100 });
+  }
+
+  /** Live calls for one customer only (never returns other users' calls). */
+  async getOnlineCallsForUser(username, magnusUserId = null) {
+    if (!username && !magnusUserId) return { rows: [], count: 0 };
+    const db = await this.getDb();
+    let rows;
+    if (magnusUserId) {
+      [rows] = await db.execute(
+        `SELECT c.id, c.sip_account, c.ndiscado, c.status, c.duration, c.codec, c.uniqueid,
+                u.username
+         FROM pkg_call_online c
+         JOIN pkg_user u ON u.id = c.id_user
+         WHERE c.id_user = ?
+         ORDER BY c.duration DESC`,
+        [magnusUserId]
+      );
+    } else {
+      [rows] = await db.execute(
+        `SELECT c.id, c.sip_account, c.ndiscado, c.status, c.duration, c.codec, c.uniqueid,
+                u.username
+         FROM pkg_call_online c
+         JOIN pkg_user u ON u.id = c.id_user
+         WHERE u.username = ?
+         ORDER BY c.duration DESC`,
+        [username]
+      );
+    }
+    return {
+      rows: rows.map((r) => ({
+        id: r.id,
+        sip_account: r.sip_account,
+        username: r.username,
+        ndiscado: r.ndiscado,
+        number: r.ndiscado,
+        status: r.status,
+        duration: r.duration,
+        sessiontime: r.duration,
+        codec: r.codec,
+        uniqueid: r.uniqueid,
+      })),
+      count: rows.length,
+    };
   }
 
   async getRefills(username, { limit = 10, offset = 0 } = {}) {

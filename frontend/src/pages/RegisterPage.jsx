@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { Gift } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../api/client';
 import { BrandLogo } from '../components/BrandLogo';
@@ -16,6 +17,7 @@ export default function RegisterPage() {
     id_plan: '',
   });
   const [plans, setPlans] = useState([]);
+  const [signupBonusMessage, setSignupBonusMessage] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const { signup } = useAuth();
@@ -23,7 +25,10 @@ export default function RegisterPage() {
 
   useEffect(() => {
     api('/auth/plans')
-      .then((r) => setPlans(r.rows || []))
+      .then((r) => {
+        setPlans(r.rows || []);
+        if (r.signupBonusMessage) setSignupBonusMessage(r.signupBonusMessage);
+      })
       .catch(() => setPlans([]));
   }, []);
 
@@ -40,8 +45,8 @@ export default function RegisterPage() {
     }
     setLoading(true);
     try {
-      await signup({ ...form, id_plan: Number(form.id_plan) });
-      navigate('/dashboard');
+      const data = await signup({ ...form, id_plan: Number(form.id_plan) });
+      navigate('/dashboard', { state: { signupMessage: data.message } });
     } catch (err) {
       setError(err.message);
     } finally {
@@ -81,6 +86,12 @@ export default function RegisterPage() {
         <p className="text-center text-sm text-emerald-700 dark:text-emerald-300 mb-4">
           Join us by filling out the form below. Fields marked * are required.
         </p>
+        {signupBonusMessage && (
+          <div className="mb-4 p-3 rounded-lg bg-lime-50 dark:bg-lime-950/30 border border-lime-300/50 dark:border-lime-600/40 flex items-start gap-2 text-sm text-emerald-900 dark:text-lime-100">
+            <Gift className="shrink-0 mt-0.5 text-lime-600 dark:text-lime-400" size={18} />
+            <span>{signupBonusMessage}</span>
+          </div>
+        )}
         {error && <div className="mb-4 p-3 bg-red-50 text-red-700 rounded-lg text-sm">{error}</div>}
 
         {plans.length === 0 && (

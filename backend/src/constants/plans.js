@@ -32,6 +32,18 @@ export const PLAN_DEFINITIONS = [
       'BOS USA — everything passes on the route',
     ],
   },
+  {
+    slug: 'zydexivr',
+    magnusName: 'zydexivr',
+    name: 'Zydex IVR',
+    description: 'USA CLI 0.18',
+    sortOrder: 2,
+    benefits: [
+      'IVR route',
+      'USA CLI 0.18',
+      'Assigned for IVR customers',
+    ],
+  },
 ];
 
 export function parsePlanBenefits(benefits) {

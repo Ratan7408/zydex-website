@@ -1,9 +1,8 @@
 /**
- * Zydex logo — one image used everywhere (favicon, sidebar, landing, login).
- * Override with VITE_BRAND_LOGO_URL in frontend/.env.local if needed.
+ * Zydex logo — bundled locally. Override with VITE_BRAND_LOGO_URL if needed.
  */
-export const BRAND_LOGO_URL = 'https://cdn.corenexis.com/files/c/6233222720.png';
-export const BRAND_FAVICON = 'https://cdn.corenexis.com/files/c/9311422720.jpg';
+export const BRAND_LOGO_URL = `${import.meta.env.BASE_URL}zydex-logo.png`;
+export const BRAND_FAVICON = `${import.meta.env.BASE_URL}zydex-favicon.jpg`;
 
 /** Telegram icon for floating support button */
 export const TELEGRAM_LOGO_URL =

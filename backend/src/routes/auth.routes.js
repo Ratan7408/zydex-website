@@ -34,7 +34,15 @@ router.get('/plans', async (req, res) => {
     where: { active: true },
     orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
   });
-  res.json({ rows: plans.map(formatPlanRow) });
+  const signupBonus = config.signupBonus > 0 ? config.signupBonus : 0;
+  res.json({
+    rows: plans.map(formatPlanRow),
+    signupBonusCredit: signupBonus,
+    signupBonusMessage:
+      signupBonus > 0
+        ? `New accounts receive $${signupBonus.toFixed(2)} free test credit to try the service.`
+        : null,
+  });
 });
 
 router.post('/signup', async (req, res) => {

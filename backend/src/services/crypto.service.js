@@ -200,15 +200,15 @@ export class CryptoService {
       oldCredit = await magnusService.getBalance(user.magnusUserId);
       const trackLabel = trackId || transaction.metadata?.trackId || 'n/a';
       const description = `Oxapay Deposit | Tracking ID: ${trackLabel}, Old credit ${oldCredit}`;
-      const refill = await magnusService.addCredit(user.magnusUserId, amount, description);
-      magnusRefillId = refill?.rows?.[0]?.id || refill?.id || null;
-
-      const db = await magnusService.getDb();
-      const [rows] = await db.execute(
-        `SELECT id FROM pkg_refill WHERE id_user = ? ORDER BY id DESC LIMIT 1`,
-        [user.magnusUserId]
+      const refill = await magnusService.addCreditWithFallback(
+        user.magnusUserId,
+        amount,
+        description
       );
-      if (rows[0]?.id) magnusRefillId = rows[0].id;
+      if (!refill.ok) {
+        throw new Error(refill.error || 'Magnus credit failed');
+      }
+      magnusRefillId = refill.refillId || null;
     }
 
     await prisma.transaction.update({

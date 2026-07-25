@@ -14,12 +14,12 @@ export default function LandingPage() {
   const [menuOpen, setMenuOpen] = useState(false);
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-zydex-bg via-emerald-950 to-zydex-bg text-emerald-50">
-      <header className="sticky top-0 z-30 border-b border-zydex-border/60 bg-zydex-bg/90 backdrop-blur-md">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-3">
+    <div className="min-h-screen overflow-x-hidden bg-gradient-to-b from-zydex-bg via-emerald-950 to-zydex-bg text-emerald-50">
+      <header className="sticky top-0 z-30 border-b border-zydex-border/60 bg-zydex-bg/90 backdrop-blur-md overflow-x-hidden">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-2 sm:gap-3 min-w-0">
           <BrandLogo to="/" size="header" />
 
-          <nav className="hidden sm:flex items-center gap-2 shrink-0 flex-nowrap">
+          <nav className="hidden sm:flex items-center gap-2 shrink-0 flex-nowrap ml-auto">
             <Link
               to="/login"
               className="whitespace-nowrap px-4 py-2 rounded-lg border border-emerald-700/80 text-emerald-100 hover:bg-emerald-900/50 text-sm font-medium shrink-0"

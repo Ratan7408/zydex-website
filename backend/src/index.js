@@ -12,6 +12,10 @@ import publicRoutes from './routes/public.routes.js';
 import prisma from './utils/prisma.js';
 import { startBackgroundJobs } from './jobs/sync.job.js';
 import { ensureDefaultPlans } from './services/plan.service.js';
+import { createRequire } from 'module';
+
+const require = createRequire(import.meta.url);
+const { oxapayWebhook: p1OxaPayWebhook } = require('/root/p1zydex/routes/webhooks.js');
 
 const app = express();
 app.set('trust proxy', 1);
@@ -31,6 +35,19 @@ app.post(
   '/api/webhooks/crypto',
   express.raw({ type: 'application/json' }),
   handleOxaPayCryptoWebhook
+);
+
+app.post(
+  '/api/webhooks/p1-crypto',
+  express.raw({ type: 'application/json' }),
+  p1OxaPayWebhook
+);
+
+const { oxapayWebhook: sipOxaPayWebhook } = require('/root/sipbot/src/routes/webhooks.js');
+app.post(
+  '/api/webhooks/sip-crypto',
+  express.raw({ type: 'application/json' }),
+  sipOxaPayWebhook
 );
 
 app.use(express.json());

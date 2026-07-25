@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 80" fill="none" role="img" aria-label="ZYDEX">
+  <defs>
+    <linearGradient id="zydexMark" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#9ae600"/>
+      <stop offset="100%" stop-color="#10b981"/>
+    </linearGradient>
+  </defs>
+  <rect x="4" y="8" width="64" height="64" rx="16" fill="url(#zydexMark)"/>
+  <path d="M24 52V28h8l12 16V28h8v24h-8L32 36v16h-8z" fill="#071210"/>
+  <text x="88" y="54" fill="#ffffff" font-family="Inter, Arial, sans-serif" font-size="44" font-weight="700" letter-spacing="4">ZYDEX</text>
+</svg>

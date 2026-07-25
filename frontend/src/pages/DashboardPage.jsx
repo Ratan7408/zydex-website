@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { Wallet, Shield, Phone, Banknote, Gift, KeyRound, RefreshCw } from 'lucide-react';
 import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
@@ -7,12 +7,21 @@ import { PlanSelector } from '../components/PlanSelector';
 
 export default function DashboardPage() {
   const { user, setUser } = useAuth();
+  const location = useLocation();
   const [data, setData] = useState(null);
   const [plans, setPlans] = useState([]);
   const [selectedPlan, setSelectedPlan] = useState('');
   const [planMessage, setPlanMessage] = useState('');
   const [planError, setPlanError] = useState('');
+  const [signupNotice, setSignupNotice] = useState('');
   const [switchingPlan, setSwitchingPlan] = useState(false);
+
+  useEffect(() => {
+    if (location.state?.signupMessage) {
+      setSignupNotice(location.state.signupMessage);
+      window.history.replaceState({}, document.title);
+    }
+  }, [location.state]);
 
   const loadDashboard = () =>
     api('/user/dashboard')
@@ -75,6 +84,12 @@ export default function DashboardPage() {
   return (
     <div>
       <h1 className="text-2xl font-bold mb-2 text-emerald-950 dark:text-emerald-50">Welcome, {user?.username}!</h1>
+      {signupNotice && (
+        <div className="mb-4 p-4 rounded-xl bg-lime-50 dark:bg-lime-950/30 border border-lime-300/50 dark:border-lime-600/40 flex items-start gap-3 text-emerald-900 dark:text-lime-100">
+          <Gift className="shrink-0 mt-0.5 text-lime-600 dark:text-lime-400" size={22} />
+          <p className="text-sm sm:text-base">{signupNotice}</p>
+        </div>
+      )}
       {data?.planName && (
         <p className="text-emerald-700 dark:text-emerald-300 mb-4">
           Current plan: <span className="font-medium text-emerald-900 dark:text-emerald-100">{data.planName}</span>
@@ -95,8 +110,15 @@ export default function DashboardPage() {
         <div className="bg-white dark:bg-zydex-bg-card rounded-2xl border border-emerald-200 dark:border-zydex-border p-6 mb-8 text-emerald-950 dark:text-emerald-50">
           <h2 className="text-lg font-semibold mb-1 text-emerald-950 dark:text-emerald-50">Your Route Plan</h2>
           <p className="text-sm text-emerald-700 dark:text-emerald-300 mb-4">
-            Switch between Zydex and Zydex Premium anytime. Changes apply immediately to your account.
+            Switch between available routes here. Your account plan, balance, and SIP settings are always read
+            live from Magnus — support can change your plan or account details from the Magnus billing panel at any time.
           </p>
+          {data?.planManagedByMagnus && (
+            <div className="mb-3 p-3 bg-amber-50 dark:bg-amber-950/20 text-amber-900 dark:text-amber-100 rounded-lg text-sm border border-amber-200/60 dark:border-amber-800/40">
+              Your current plan <strong>{data.planName}</strong> was set by an administrator. Contact support to change it,
+              or pick a self-service plan below if you want to switch yourself.
+            </div>
+          )}
           {planError && <div className="mb-3 p-3 bg-red-50 text-red-700 rounded-lg text-sm">{planError}</div>}
           {planMessage && (
             <div className="mb-3 p-3 bg-lime-50 dark:bg-lime-950/30 text-emerald-800 dark:text-lime-200 rounded-lg text-sm">

@@ -1,4 +1,10 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none">
-  <rect width="32" height="32" rx="8" fill="#0f172a"/>
-  <text x="16" y="22" text-anchor="middle" fill="white" font-family="Arial" font-weight="bold" font-size="18">Z</text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none" role="img" aria-label="ZYDEX">
+  <defs>
+    <linearGradient id="zydexIcon" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#9ae600"/>
+      <stop offset="100%" stop-color="#10b981"/>
+    </linearGradient>
+  </defs>
+  <rect width="32" height="32" rx="8" fill="url(#zydexIcon)"/>
+  <path d="M10 22V10h5l7.5 10V10H28v12h-5L15.5 12v10H10z" fill="#071210"/>
 </svg>
